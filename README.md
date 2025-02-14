@@ -1,4 +1,4 @@
-# DevRel Agent Example
+# DevRel Agent
 
 ## Description
 

@@ -1,2 +1,2 @@
-galadriel>=0.0.8
+galadriel>=0.0.9
 gitingest>=0.1.3
