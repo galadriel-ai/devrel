@@ -1,0 +1,1620 @@
+Directory structure:
+└── docs/galadriel-network/
+    ├── integrations/
+    │   ├── tools.mdx
+    │   ├── models.mdx
+    │   └── clients.mdx
+    ├── examples/
+    │   └── examples.mdx
+    ├── concepts/
+    │   └── runtime.mdx
+    ├── tutorials/
+    │   ├── agents.mdx
+    │   ├── tools.mdx
+    │   ├── rag.mdx
+    │   ├── wallet.mdx
+    │   ├── clients.mdx
+    │   ├── chat-to-agents.mdx
+    │   ├── memory.mdx
+    │   └── payments.mdx
+    └── get-started/
+        ├── overview.mdx
+        ├── agent-framework.mdx
+        └── quickstart.mdx
+
+================================================
+File: /integrations/tools.mdx
+================================================
+---
+title: Tools
+---
+Galadriel framework comes with a set of tools out of the box. New tools are regularly added to the framework.
+
+## Web3 Tools
+
+Here is the list of market data API available as tools in the framework:
+
+### [Coingecko](https://github.com/galadriel-ai/galadriel/blob/main/galadriel/tools/web3/coingecko.py)
+
+Current provided set of tools related with Coingecko:
+
+- `get_coin_price`: Retrieves the current price, market cap, 24hr volume, and 24hr change for a given cryptocurrency.
+- `get_coin_historical_data`: Retrieves historical market data for a given cryptocurrency.
+- `fetch_trending_coins`: Retrieves the current trending coins on CoinGecko.
+
+### [Dexscreener](https://github.com/galadriel-ai/galadriel/blob/main/galadriel/tools/web3/dexscreener.py)
+
+ Tools for interacting with the Dexscreener API to retrieve token information and market data.
+
+- `fetch_market_data`: Fetches market data for a list of tokens.
+- `get_token_profile`: Retrieves the latest token profiles from Dexscreener. It returns a formatted string containing the chain ID, token address, description, and links for each token.
+
+### [Jupiter](https://github.com/galadriel-ai/galadriel/blob/main/galadriel/tools/web3/jupiter.py)
+
+Tool for swapping tokens on the Solana blockchain using the Jupiter Aggregator:
+
+- `swap_token`: This tool allows an agent to swap one token for another.
+
+### [Solana](https://github.com/galadriel-ai/galadriel/blob/main/galadriel/tools/web3/solana.py)
+
+Set of tools for managing user token balances on the Solana blockchain
+
+- `update_user_balance`: Updates the balance of a specific token for a given user.
+- `get_all_users`: Returns a JSON string containing a list of all user addresses that have balances stored.
+- `get_all_portfolios`: Returns a JSON string representing the portfolios of all users.
+- `get_user_balance`: Retrieves a user's balance for a specific token.
+
+## Composio Tools
+
+[Composio](https://github.com/ComposioHQ/composio) is a service for connecting AI Agents to hundreds external tools like  Gmail, GitHub, Salesforce, etc. Each of these tools can be added by it’s name by using `convert_action` helper.
+
+Galadriel framework empowers you to use any tool from Composio, here’s how to do it:
+
+### How to use
+
+```python
+from galadriel.tools.composio_converter import convert_action
+composio_weather_tool = convert_action(
+    os.getenv("COMPOSIO_API_KEY"), "WEATHERMAP_WEATHER"
+)
+
+agent = CodeAgent(
+    model=model,
+    tools=[composio_weather_tool],
+)
+```
+
+## Langchain Tools
+
+Galadriel framework allows you to use any tool from Langchain.
+
+### How to use
+
+Take the following example where we convert the [langchain’s wikipedia](https://python.langchain.com/v0.1/docs/modules/tools/) tool:
+
+```python
+from galadriel.core_agent import Tool
+from langchain_community.tools import WikipediaQueryRun
+from langchain_community.utilities import WikipediaAPIWrapper
+
+api_wrapper = WikipediaAPIWrapper(top_k_results=1, doc_content_chars_max=100)
+tool = WikipediaQueryRun(api_wrapper=api_wrapper)
+wikipedia_tool = Tool.from_langchain(langchain_tool=tool)
+```
+
+## [Retriever](https://github.com/galadriel-ai/galadriel/blob/main/galadriel/tools/retriever.py) tool
+
+Retriever provides access to loaded documents, which can be queried to retrieve knowledge.
+
+### How to use
+
+```python
+# Load documents: https://python.langchain.com/docs/tutorials/rag/#loading-documents
+# Split documents: https://python.langchain.com/docs/tutorials/rag/#splitting-documents
+
+retriever_tool = RetrieverTool(docs)
+agent = CodeAgent(
+    tools=[retriever_tool], model=model, max_steps=4, verbosity_level=2
+)
+```
+
+Check out [Agentic RAG](/galadriel-network/tutorials/rag) where `RetrieverTool` is used to build an agent that leverages a knowledge base.
+
+## Twitter/X Tools
+
+Galadriel provided multiple tools to build Twitter/X agents:
+
+- `TwitterPostTool` for posting a new tweet
+- `TwitterRepliesTool` for replying to existing tweet
+- `TwitterGetPostTool` for fetching a specific tweet by its ID
+- `TwitterSearchTool` which searches tweets based on a provided query
+
+## Conclusion
+
+Galadriel provides a robust set of built-in tools, covering Web3, AI-powered integrations, retrieval-augmented generation, and social media automation. With support for external platforms like Composio and Langchain, the framework enables seamless interaction with a wide range of services. As new tools continue to be added, Galadriel remains a powerful and evolving solution for building AI-driven applications. Stay updated with the latest additions and enhancements by following the official repository.
+
+
+================================================
+File: /integrations/models.mdx
+================================================
+---
+title: Models
+---
+Models serve as the core engine of Agents, and the Galadriel framework supports multiple LLM providers to offer flexibility and scalability. The following LLM providers are currently supported:
+
+- **LiteLLMModel**
+- **HfApiModel**
+- **TransformersModel**
+- **AzureOpenAIServerModel**
+
+In the sections below, we provide details on each supported provider and, more importantly, how to use them.
+
+## LiteLLMModel
+
+The `LiteLLMModel` leverages [**LiteLLM**](https://www.litellm.ai/) to support over 100 LLMs from various providers. Here’s how to use it:
+
+```python
+from galadriel.core_agent import LiteLLMModel
+
+messages = [
+  {"role": "user", "content": [{"type": "text", "text": "Hello, how are you?"}]}
+]
+
+model = LiteLLMModel("anthropic/claude-3-5-sonnet-latest", temperature=0.2, max_tokens=10)
+print(model(messages))
+```
+
+## **HfApiModel**
+
+This model interact with Hugging Face's Inference API. Here’s how to use it:
+
+```python
+from galadriel.core_agent import HfApiModel
+
+messages = [{"role": "user", "content": "Explain quantum mechanics in simple terms."}]
+
+model = HfApiModel(
+    model_id="Qwen/Qwen2.5-Coder-32B-Instruct",
+    token=os.getenv("HF_TOKEN"),
+    max_tokens=5000,
+)
+print(model(messages, stop_sequences=["END"]))
+```
+
+## **TransformersModel**
+
+The `TransformersModel` allows you to load and run Hugging Face models locally using the `transformers` library. Ensure that both `transformers` and `torch` are installed before use.
+
+```python
+from galadriel.core_agent import TransformersModel
+
+model = TransformersModel(
+    model_id="Qwen/Qwen2.5-Coder-32B-Instruct",
+    device="cuda",
+    max_new_tokens=5000,
+)
+messages = [{"role": "user", "content": "Explain quantum mechanics in simple terms."}]
+response = model(messages, stop_sequences=["END"])
+print(response)
+```
+
+## **AzureOpenAIServerModel**
+
+The `AzureOpenAIServerModel` enables integration with any Azure OpenAI deployment. Below is an example of how to configure and use it:
+
+```python
+import os
+from galadriel.core_agent import AzureOpenAIServerModel
+
+model = AzureOpenAIServerModel(
+    model_id = os.environ.get("AZURE_OPENAI_MODEL"),
+    azure_endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT"),
+    api_key=os.environ.get("AZURE_OPENAI_API_KEY"),
+    api_version=os.environ.get("OPENAI_API_VERSION")
+)
+```
+
+## Conclusion
+
+Galadriel provides seamless integration with multiple LLM providers, allowing you to choose the best model for your needs—whether it's via LiteLLM for broad model access, Hugging Face’s API for hosted inference, local execution with Transformers, or Azure OpenAI for enterprise deployments. By leveraging these options, you can build powerful, flexible AI agents tailored to your specific requirements.
+
+
+================================================
+File: /integrations/clients.mdx
+================================================
+---
+title: Clients
+---
+Galadriel framework comes with a set of clients out of the box. New core clients are regularly added to the framework. Below is a list of currently supported clients and how to use them.
+
+### [Cron Client](https://github.com/galadriel-ai/galadriel/blob/main/galadriel/clients/cron.py)
+
+Cron client sends empty message to the agent in order to trigger the agent execution at regular intervals.
+
+**Use Cases**
+
+- a trading agent which regularly executes its own trading strategy based on market data and updates users’ portfolios
+- a twitter agent which distills world news’ every 1 hour and prepares a comprehensive report
+
+**Example:**
+
+```python
+trading_agent = # Create your agent here
+cron = Cron(60) # Configure Cron client
+
+agent = AgentRuntime(
+    inputs=[cron],  # Pass the Cron client to trigger agent execution regularly
+    outputs=[],
+    agent=trading_agent,
+)
+```
+
+### [Discord Client](https://github.com/galadriel-ai/galadriel/blob/main/galadriel/clients/discord_client.py)
+
+This client listens to messages in a Discord server and replies with agent-generated responses.
+
+**Use Cases**
+
+- an assistant agent which answers questions, moderates conversations, or assists in a Discord community.
+
+**Example:**
+
+```python
+agent = # Create your agent here
+DISCORD_GUILD_ID = "<DISCORD_GUILD_ID>" # Add your Discord guild ID
+discord_client = DiscordClient(guild_id=DISCORD_GUILD_ID)) # Create Discord client
+knowledge_base_output_client = # Create client eg based on [SimpleMessageClient](https://github.com/galadriel-ai/galadriel/blob/main/galadriel/clients/simple_message_client.py) which updates company's knowledge base based on new facts from Discord channels
+
+agent = AgentRuntime(
+    inputs=[discord_client], # Pass the Discord client to listen to Discord inputs
+    outputs=[knowledge_base_output_client],
+    agent=agent,
+)
+```
+
+### [Telegram Client](https://github.com/galadriel-ai/galadriel/blob/main/galadriel/clients/telegram_client.py)
+
+The Telegram client listens to messages in a Telegram server and replies with agent-generated responses.
+
+**Use Cases**
+
+- An assistant agent that answers questions, moderates conversations, or assists in a Telegram community.
+
+**Example:**
+
+```python
+agent = # Create your agent here
+TELEGRAM_TOKEN = "<TELEGRAM_TOKEN>" # Add your Telegram bot token ID
+telegram_client = TelegramClient(token=TELEGRAM_TOKEN))
+
+agent = AgentRuntime(
+    inputs=[telegram_client],
+    outputs=[telegram_client],
+    agent=agent,
+)
+```
+
+### [Gradio Client](https://github.com/galadriel-ai/galadriel/blob/main/galadriel/clients/gradio_client.py)
+
+The Gradio client listens to messages from a local Gradio server and replies with agent-generated responses.
+
+**Use Cases**
+
+- Test and debug your agent without requiring extra tokens or configuration.
+
+```python
+agent = # Create your agent here
+gradio_client = GradioClient()
+
+agent = AgentRuntime(
+    inputs=[gradio_client],
+    outputs=[gradio_client],
+    agent=agent,
+)
+```
+
+### [Terminal Client](https://github.com/galadriel-ai/galadriel/blob/main/galadriel/clients/terminal_client.py)
+
+The Terminal client listens to messages from the terminal and replies with agent-generated responses.
+
+**Use Cases**
+
+- Test and debug your agent without requiring extra tokens or configuration.
+
+```python
+agent = # Create your agent here
+terminal_client = TerminalClient()
+
+agent = AgentRuntime(
+    inputs=[terminal_client],
+    outputs=[terminal_client],
+    agent=agent,
+)
+```
+
+### [SimpleMessageClient](https://github.com/galadriel-ai/galadriel/blob/main/galadriel/clients/simple_message_client.py)
+
+A simple client that receives messages when instantiated and pushes them to the agent at a specified interval. The agent's responses are then printed to the console.
+
+**Use Cases**
+
+- Test and debug your agent without requiring extra (authentication?) tokens or configuration.
+
+```python
+agent = # Create your agent here
+client = SimpleMessageClient("What is the capital of Estonia?")
+
+agent = AgentRuntime(
+    inputs=[client],
+    outputs=[client],
+    agent=agent,
+)
+```
+
+### [TwitterMentionClient](https://github.com/galadriel-ai/galadriel/blob/main/galadriel/clients/twitter_mention_client.py)
+
+The TwitterMention client listens to mentions on Twitter and replies accordingly.
+
+**Use Cases**
+
+- An assistant agent that answers questions, moderates conversations, or assists in a Twitter community.
+
+```python
+agent = # Create your agent here
+twitter_client = TwitterMentionClient(
+    TwitterCredentials(
+        consumer_api_key="<TWITTER_CONSUMER_API_KEY>",
+        consumer_api_secret="<TWITTER_CONSUMER_API_SECRET>",
+        access_token="<TWITTER_ACCESS_TOKEN>",
+        access_token_secret="<TWITTER_ACCESS_TOKEN_SECRET>",
+    ),
+    user_id="<TWITTER_USER_ID>",
+)
+
+agent = AgentRuntime(
+    inputs=[twitter_client],
+    outputs=[twitter_client],
+    agent=agent,
+)
+```
+
+### [TwitterPostClient](https://github.com/galadriel-ai/galadriel/blob/main/galadriel/clients/twitter_post_client.py)
+
+The TwitterPost client is an `AgentOutput` type that posts new messages on a Twitter account.
+
+**Use Cases**
+
+- An assistant that posts curated and personalized content on Twitter.
+
+```python
+agent = # Create your agent here
+
+agent = AgentRuntime(
+    inputs=[Cron(POST_INTERVAL_SECONDS)],
+    outputs=[TwitterPostClient()],
+    agent=agent,
+)
+```
+
+## Build your own Client
+
+In order to build the client, implement one or both of these interfaces:
+
+### AgentInput
+
+```python
+class AgentInput:
+    async def start(self, queue: PushOnlyQueue) -> None:
+        pass
+```
+
+`start` function contains a queue to which the agent should push a `Message` object.
+
+```python
+class Message(BaseModel):
+    content: str
+    conversation_id: Optional[str] = None
+    type: Optional[str] = None
+    additional_kwargs: Optional[Dict] = None
+
+```
+
+In the simplest case, `Message` has just`content` .
+
+Let’s implement the simplest `AgentInput`
+
+```python
+class SimpleInput(AgentInput):
+    async def start(self, queue: PushOnlyQueue):
+        await queue.put(Message(content="Hello, Agent!"))
+```
+
+This client, when passed to the runtime will pass a single `Hello, Agent!` message to the agent.
+
+### AgentOutput
+
+```python
+class AgentOutput:
+    async def send(self, request: Message, response: Message) -> None:
+        pass
+```
+
+`send` function receives the response from the client, together with the request which trigger the agent flow.
+
+Here is the simplest implementation of
+
+```python
+class SimpleOutput(AgentOutput):
+    async def send(self, request: Message, response: Message):
+        print(f"Agent Response: {response.content}")
+```
+
+As explained above, the input and output need to be passed to AgentRuntime to start operating.
+
+## Conclusion
+
+Galadriel provides a diverse set of built-in clients to seamlessly integrate agents with various platforms, including messaging services, social media, and local development environments. Whether you need to trigger agents at regular intervals, process real-time user interactions, or debug locally, these clients offer flexible solutions. Additionally, developers can extend Galadriel’s capabilities by implementing custom clients using the `AgentInput` and `AgentOutput` interfaces. This modular approach ensures adaptability to a wide range of use cases, enabling efficient and intelligent agent interactions across different ecosystems.
+
+
+================================================
+File: /examples/examples.mdx
+================================================
+---
+title: Examples
+description: List of agent examples built with Galadriel
+---
+
+- [DeFAI Trading Agent](https://github.com/galadriel-ai/galadriel/tree/main/examples/trading) - an agent which fetches trending coins, gets market data, does analysis and swaps token.
+- [Payments Agent](https://github.com/galadriel-ai/galadriel/tree/main/examples/payments) - a research agent which receives SOL payments from users before executing tasks.
+- [Discord Agent](https://github.com/galadriel-ai/galadriel/tree/main/examples/discord) - an agent which simulates Elon Musk's personality, capable of interacting with users in a Discord server
+- [Telegram Agent](https://github.com/galadriel-ai/galadriel/tree/main/examples/telegram) - an agent which simulates Elon Musk's personality, capable of interacting with users in a Telegram chat
+- [Twitter Agent](https://github.com/galadriel-ai/galadriel/tree/main/examples/twitter) - an agent that generates and schedules regular Twitter posts based on posting intervals
+- [Multi-Agents](https://github.com/galadriel-ai/galadriel/tree/main/examples/multi-agents) - an example of a multi-agent system that uses Galadriel to execute tasks.
+
+================================================
+File: /concepts/runtime.mdx
+================================================
+---
+title: Agent Runtime
+---
+## What is an Agent Runtime?
+
+For an agent to be truly autonomous, it must operate continuously, ready to process new requests in real time. This is precisely  the role of `AgentRuntime`. It is the core orchestration layer that manages agent execution, ensuring that messages are processed efficiently while maintaining the agent’s state.
+
+<img src="/images/agent_1.jpg" alt="Agent Runtime Diagram" />
+
+## How It Works
+
+At a high level, the `Agent Runtime` follows this execution loop:
+
+1. **Receive a [Message](https://github.com/galadriel-ai/galadriel/blob/main/galadriel/entities.py#L11)** – An input client sends a message to the runtime.
+2. **Process the [Message](https://github.com/galadriel-ai/galadriel/blob/main/galadriel/entities.py#L11)** – The agent receives and handles the request.
+3. **Send the Response** – The agent's output is forwarded to the appropriate client.
+4. **Repeat** – The runtime continuously handles incoming messages in a loop.
+
+`AgentRuntime` interface is defined as follows
+
+```python
+class AgentRuntime:
+    def __init__(
+            self,
+            # Any number of input Clients
+            inputs: List[AgentInput],
+            # Any number of output Clients
+            outputs: List[AgentOutput],
+            # The agent to run
+            agent: Agent,
+            # optional short term memory - more on that later
+            short_term_memory: Optional[ShortTermMemory] = None,
+            # optional pricing - more on that later
+            pricing: Optional[Pricing] = None,
+    ):
+        ...
+```
+
+The `Agent Runtime` **can handle any number of input/output clients concurrently, making it easy to implement all kinds of agents that can handle various workflows.
+
+## Using `AgentRuntime`
+
+Based on the interface above, here’s an example of how the runtime is created.
+
+```python
+runtime = AgentRunTime(
+	inputs=[cron, discord], # Specify which input clients should trigger agent execution
+	outputs=[twitter], # Specify which output clients should publish agent's results
+	agent=agent, # Specify which agent should be executed
+)
+```
+
+The creation of the runtime is lightweight as it doesn’t start listening to inputs nor trigger the agent execution. In order to start the runtime process, its `AgentRuntime#run` must be called.
+
+```python
+asyncio.run(runtime.run())
+```
+
+Note that in order to run infinitely and asynchronously respond to inputs, `AgentRuntime#run` is `async` function. Therefore, it has to be passed to `asyncio.run`.
+
+## Conclusion
+
+The `Agent Runtime` is the backbone of autonomous agent execution, enabling seamless integration and scalability. It’s main responsibilities are:
+
+- **Orchestration** – the runtime ties the agent execution flow together. It enables Agents to run indefinitely and autonomously. Handles multiple concurrent clients
+- **Validation -** manages the types of messages coming in and making sure they are valid
+- **Integration** – Supports multiple input/output sources, enabling build complex agents. It can be extended with additional components like memory and pricing
+
+
+================================================
+File: /tutorials/agents.mdx
+================================================
+---
+title: Agents
+---
+
+Agents are the **thinking** component of an AI application: they parse user input, reason about it, potentially call external tools, and generate intelligent responses. In Galadriel, an Agent does all of that and more—it can be customized with different personalities, tools, and memory capabilities, and orchestrated via a runtime so it can operate continuously.
+
+## What Is a Galadriel Agent?
+
+It’s an entire AI system that includes:
+
+1. **An Agent Interface** (e.g., `ToolCallingAgent`, `CodeAgent`, or a custom interface you build),
+2. [**Tools**](/galadriel-network/tutorials/tools) it can call (e.g., a web search tool, a database query tool),
+3. [**Memory**](/galadriel-network/tutorials/memory) for context,
+4. [**Input/Output Clients**](/galadriel-network/tutorials/clients) that send user queries and receive responses,
+5. **A [Runtime](/galadriel-network/concepts/runtime)** that orchestrates continuous execution, communication and state persistence.
+
+You can picture an Agent as follows:
+
+<img src="/images/agent_2.jpg" alt="Agent Diagram" />
+
+---
+
+## What is autonomy?
+
+**Autonomy** refers to how many decisions the Agent makes on its own to complete a task. This can range from simply choosing one of two routes (low autonomy) to a full multi-step, looped approach (high autonomy):
+
+| Agency Level | Description | Example Pattern |
+| --- | --- | --- |
+| ★☆☆ (Low) | LLM output is used for simple decisions (like routing). | `if llm_decision(): path_a() else: path_b()` |
+| ★★☆ (Medium) | LLM decides which tool/function to call and its arguments. | `tool_name, args = llm_parse_output(); tool_name(args)` |
+| ★★★ (High) | LLM controls the entire multi-step loop and orchestrates calls. | `while llm_should_continue(): execute_next_step()` |
+
+Galadriel empowers highly autonomous agents.  Its Runtime ensures agents can operate continuously, while the Agent Interface acts as the agent's "brain," reasoning through a multi-step loop driven by LLM output and strategically using available tools.  This design enables Galadriel agents to be fully autonomous, capable of running and performing tasks independently, without direct human intervention.
+
+### Tools, Loops, and Runtime
+
+- **Tools** provide *real-world capabilities* (e.g., searching the web, querying databases, etc.).
+- **Loops** enable iterative reasoning, via a [ReAct-style approach](https://huggingface.co/papers/2210.03629):
+    1. Observe the current situation,
+    2. Think (“Thought”),
+    3. Call a tool if needed (“Action”),
+    4. Observe the result (“Observation”),
+    5. Decide if another step is needed.
+- **The Runtime** connects all the dots by continuously feeding user requests to the Agent, capturing outputs, and optionally handling concurrency, logging, or multi-agent orchestration.
+
+---
+
+## The Agent Interface
+
+The Agent Interface is composed of the following interface: a class with an `execute` method that takes in a `Message` and returns a `Message`:
+
+```python
+from abc import ABC, abstractmethod
+
+class Agent(ABC):
+    @abstractmethod
+    async def execute(self, request: Message) -> Message:
+        raise RuntimeError("Function not implemented")
+```
+
+Where `Message` is defined as:
+
+```python
+class Message(BaseModel):
+    content: str
+    conversation_id: Optional[str] = None
+    type: Optional[str] = None
+    additional_kwargs: Optional[Dict] = None
+```
+
+> Note: This is the bare-bones of an **Agent Interface**. However, when we refer to **Agents**, we mean the entire system which also includes tools, memory, runtime and clients.
+>
+
+---
+
+## Built-In Agent Interfaces
+
+Galadriel provides two main interfaces you can use out of the box:
+
+1. **`ToolCallingAgent`** – Focuses on calling external functions (tools) to solve tasks.
+2. **`CodeAgent`** – Lets the LLM “write” Python code that is then executed, offering a powerful and flexible approach for certain use-cases.
+
+You can also create *custom agents* for specific personalities or domain knowledge. For example, [**`CharacterAgent`**](https://github.com/galadriel-ai/galadriel/tree/main/examples/discord) shows how to craft an agent with a distinct persona (like a Discord bot with a particular style).
+
+---
+
+## Sample Usage
+
+Below is a quick demonstration of how to set up a `CodeAgent` with a web search tool, run it via the runtime, and communicate with a simple input/output client.
+
+```python
+import asyncio
+from galadriel import AgentRuntime, CodeAgent
+from galadriel.clients import SimpleMessageClient
+from galadriel.core_agent import LiteLLMModel, DuckDuckGoSearchTool
+
+model = LiteLLMModel(model_id="gpt-4o", api_key="<ADD YOUR OPENAI KEY HERE>")
+
+agent = CodeAgent(
+    model=model,
+    tools=[DuckDuckGoSearchTool()]
+)
+
+# Simple input/output client:
+client = SimpleMessageClient("Explain the concept of blockchain")
+
+# The runtime orchestrates continuous execution of the agent.
+runtime = AgentRuntime(
+    agent=agent,
+    inputs=[client],
+    outputs=[client],
+)
+asyncio.run(runtime.run())
+```
+
+1. **`CodeAgent`** can “write” code to perform tasks.
+2. **`DuckDuckGoSearchTool`** provides a web search capability.
+3. **`SimpleMessageClient`** supplies the user’s query and will receive the final answer.
+4. **`AgentRuntime`** ties it all together, feeding data between the user, agent, and output.
+
+---
+
+## Multi-Agents
+
+Multi-agent systems enable several agents to work together on a task, often yielding better performance than a single monolithic agent. By dividing responsibilities among agents, you can achieve efficient specialization. For example, rather than filling the memory of a code-generating agent with the details of every webpage visited by a web search agent, you can separate these concerns by delegating tasks to specialized agents.
+
+### Key Concepts
+
+- **Specialization**: Each agent focuses on a specific sub-task, leveraging unique tool sets and memory.
+- **Delegation**: A manager agent can direct tasks to worker agents optimized for those tasks.
+
+### Implementation Example
+
+```python
+import asyncio
+from galadriel import AgentRuntime, CodeAgent
+from galadriel.clients import SimpleMessageClient
+from galadriel.core_agent import LiteLLMModel, DuckDuckGoSearchTool
+
+model = LiteLLMModel(model_id="gpt-4o", api_key="<ADD YOUR OPENAI KEY HERE>")
+
+managed_web_agent = CodeAgent(
+    tools=[DuckDuckGoSearchTool()],
+    model=model,
+    name="web_search",
+    description="Runs web searches for you. Give it your query as an argument.",
+)
+
+manager_agent = CodeAgent(tools=[], model=model, managed_agents=[managed_web_agent])
+
+client = SimpleMessageClient("What's the most recent of Daige on X (twitter)?")
+
+# Set up the runtime
+runtime = AgentRuntime(
+    agent=manager_agent,
+    inputs=[client],
+    outputs=[client],
+)
+
+# Run the agent
+asyncio.run(runtime.run())
+```
+This example demonstrates a manager-worker pattern using multiple agents:
+
+- **Manager Agent**: A CodeAgent that receives user queries and coordinates with specialized worker agents.
+- **Web Search Agent**: A worker agent equipped with DuckDuckGoSearchTool to handle web search requests.
+- **SimpleMessageClient**: Implements input/output interfaces to send queries and display results.
+- **AgentRuntime**: Connects the manager and worker agents with the client, orchestrating continuous execution.
+
+---
+
+## Conclusion
+
+Agents in Galadriel empower you to build **autonomous AI systems** that:
+
+- Utilize state-of-the-art LLM [Models](/galadriel-network/integrations/models).
+- Integrate seamlessly with [Tools](/galadriel-network/integrations/tools).
+- Maintain meaningful [Memory](/galadriel-network/tutorials/memory).
+- Run continuously, responding to user requests in real time when combined with an [AgentRuntime](/galadriel-network/concepts/runtime).
+
+---
+
+## Next Steps
+
+- Learn how to integrate your agent into the [AgentRuntime](/galadriel-network/concepts/runtime).
+- [Examples](/galadriel-network/examples/examples) - Check out our repository for real-world sample projects.
+
+================================================
+File: /tutorials/tools.mdx
+================================================
+---
+title: Tools
+---
+## What is a Tool?
+
+A tool is a predefined function available for an agent to use when it decides to. It augments the LLM model used by the agent to interact with external data sources, APIs, or programs. For example, a tool can fetch the weather in London or sign and submit a transaction to Ethereum to update a portfolio.
+
+Every tool extends the [Tool](https://github.com/huggingface/smolagents/blob/main/src/smolagents/tools.py#L83) class and specifies:
+
+- A `name` used in the prompt for an agent.
+- A `description` of what the tool does, the inputs it expects, and the output(s) it will return.
+- A type of tool `output`.
+- `Inputs` it expects.
+
+## Adding tool-use to your agent
+
+Tools are passed to the `agent` object. The agent can run with any number of tools, including no tools at all.
+
+### Prerequisites
+
+Make sure you’ve gone through the quick start guide and have the development environment set up.
+
+### Example usage
+
+```python
+from galadriel.tools.web3 import dexscreener
+
+agent = CodeAgent(
+    model=model,
+    tools=[dexscreener.fetch_market_data],
+)
+```
+
+In this example, `dexscreener.fetch_market_data` is a tool available in `galadriel.tools.web3`.
+
+Complete example code is [here](https://github.com/galadriel-ai/galadriel/tree/main/examples/basic-web3).
+
+### List of tools provided by Galadriel
+
+Visit the [Tools Integration](/galadriel-network/integrations/tools) page to explore our growing list of supported tools and learn how to integrate them. You can also leverage tools from [Composio](https://composio.dev/) and [Langchain](https://python.langchain.com/v0.1/docs/modules/tools/).
+
+### Build your own tools
+
+You can also build your own tools. There are two ways to do it.
+
+#### Building simple tools
+To build simple tools, annotate the function with `@tool`.
+Then, right under the function signature, provide the description explaining what the tool does, arguments it expects, and the return format. These values will be used by LLM to evaluate when and how to use the tool.
+
+
+```python
+from galadriel.core_agent import tool
+
+@tool
+def get_time(location: str) -> str:
+    """
+    Get the current time in the given location.
+    Args:
+        location: the location
+    """
+    return f"The time in {location} is {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+```
+
+#### Building more complex tools
+
+To build complex tools, Extend the `Tool` class similarly to [RetrieverTool](https://github.com/galadriel-ai/galadriel/blob/main/galadriel/tools/retriever.py).
+
+#### Want to integrate your tool into Galardiel?
+
+Contact our developers on Discord to integrate your tool into the Galadriel framework out of the box.
+
+## Conclusion
+
+Tools significantly expand an agent’s capabilities, enabling interaction with external systems and data sources. Whether using built-in tools, third-party integrations, or custom implementations, tools make AI agents more powerful and versatile.
+
+## See next
+
+- [Tools](/galadriel-network/integrations/tools)
+- [Wallet](/galadriel-network/concepts/wallet)
+- [Memory](/galadriel-network/tutorials/memory)
+
+
+================================================
+File: /tutorials/rag.mdx
+================================================
+---
+title: Agentic RAG
+---
+## What is Agentic RAG?
+
+While RAG helps ground language models in factual, domain-specific data, basic implementations have limitations:
+
+### Common pitfalls of simple RAG:
+
+1. **Single-step retrieval** – If the initial retrieval is inaccurate, the model’s response suffers, with no way to refine the search.
+2. **Query mismatch** – Directly matching the user’s query can miss relevant results if phrasing differs (e.g., question vs. statement).
+
+### How Agentic RAG improves RAG
+
+An **agentic RAG** overcomes these issues by:
+
+- **Iterating retrieval** – Refining queries when initial results are off-target.
+- **Rewriting queries** – Adjusting phrasing to better match stored documents.
+
+By actively optimizing search strategies, an agentic RAG surfaces more relevant content than a single-step approach.
+
+## How to build a RAG Agent
+
+By **turning RAG into an agent-based approach**, we can address these limitations more effectively.
+
+### Preparing the knowledge base
+
+In this example, we load a dataset of documentation pages for various Hugging Face libraries, keeping only those related to the `transformers` library. We then split this data into smaller chunks, which will form our searchable knowledge base.
+
+```python
+
+import datasets
+from langchain.docstore.document import Document
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+knowledge_base = datasets.load_dataset("m-ric/huggingface_doc", split="train")
+knowledge_base = knowledge_base.filter(lambda row: row["source"].startswith("huggingface/transformers"))
+
+source_docs = [
+    Document(page_content=doc["text"], metadata={"source": doc["source"].split("/")[1]})
+    for doc in knowledge_base
+]
+
+text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=500,
+    chunk_overlap=50,
+    add_start_index=True,
+    strip_whitespace=True,
+    separators=["\n\n", "\n", ".", " ", ""],
+)
+docs_processed = text_splitter.split_documents(source_docs)
+
+```
+
+At this point, `docs_processed` is a structured collection of document chunks, ready to be used by a retriever tool.
+
+---
+
+### **Retriever Tool**
+
+Galadriel framework provides a [RetrieverTool](https://github.com/galadriel-ai/galadriel/blob/main/galadriel/tools/retriever.py) (visit [Tools](/galadriel-network/integrations/tools) for more details) that uses semantic search (BM25 for simplicity) to fetch relevant passages. This tool will be called by the agent whenever it needs more information.
+
+> Note: You can replace BM25 with a vector-based retriever for better semantic matching.
+>
+
+### **Initializing the Agent**
+
+Check the code
+
+```python
+import asyncio
+from galadriel import AgentRuntime, CodeAgent
+from galadriel.clients import SimpleMessageClient
+from galadriel.core_agent import LiteLLMModel
+**from galadriel.tools.retriever import RetrieverTool**
+
+model = LiteLLMModel(model_id="gpt-4o", api_key="<YOUR_OPENAI_API_KEY>")
+
+**retriever_tool = RetrieverTool(docs_processed)**
+
+agent = CodeAgent(
+    model=model,
+    tools=[**retriever_tool**],
+)
+
+client = SimpleMessageClient("For a transformers model training, which is slower, the forward or the backward pass?")
+
+runtime = AgentRuntime(
+    agent=agent,
+    inputs=[client],
+    outputs=[client],
+)
+
+asyncio.run(runtime.run())
+
+```
+
+The agent will attempt to solve the user’s query by:
+
+1. Reasoning through the user’s prompt step by step.
+2. Calling `retriever_tool` to gather relevant context from the knowledge base.
+3. Potentially adjusting or refining the query if needed.
+4. Providing a final answer once enough context is gathered.
+
+Bellow is a screenshot with a snippet of the logs from the execution:
+
+<img src="/images/agentic_rag.png" alt="RAG Agent" />
+
+As you can see, the agent was successful in selecting semantic relevant chunks of text and produced the final answer: *The backward pass is typically slower than the forward pass during transformers model training.*
+
+## Conclusion
+
+**RAG Agents** provide a powerful way to **ground** your language model’s outputs on **factual, domain-specific data**. By:
+
+- **Rewriting queries** – Agents can better match the style or content of the relevant documents.
+- **Iterating retrieval** – Agents critique and refine their searches when initial results are insufficient.
+- **Controlling knowledge access** – You decide what information the agent can retrieve, ensuring compliance and data security.
+
+With this approach, you can address the pitfalls of single-step or query-mismatch retrieval and tap into more **flexible, accurate, and controllable** LLM interactions.
+
+================================================
+File: /tutorials/wallet.mdx
+================================================
+---
+title: Wallet
+---
+## Why does an agent need a Wallet?
+
+To enable an agent to interact with the blockchain—such as autonomously executing trades—you must create a wallet and grant the agent control access. This allows the agent to sign transactions, for example, swapping assets based on its financial decisions.
+
+## Wallet Setup
+
+Before using the wallet, you must either
+
+- create a new Solana wallet
+- or import an existing wallet
+
+### Creating a Wallet
+
+Use the following command to create a new wallet:
+
+```bash
+galadriel wallet create
+```
+
+By default, the wallet's private key is stored at `~/secret/.private_key.json`. You can specify a custom path using the `--path` flag:
+
+```bash
+galadriel wallet create --path /your/custom/path.json
+```
+
+The private key is stored in JSON format as a standard Solana Ed25519 keypair.
+
+### Importing an Existing Wallet
+
+To import an existing wallet, use one of the following methods:
+
+**Import from a file**
+
+    ```bash
+    galadriel wallet import --path /Users/galadriel/my_solana_key.json
+    ```
+
+**Import using a private key string**
+
+    ```bash
+    galadriel wallet import --private-key "[236,183,172,159,151,136,98,48,88,225,87,94,91,65,98,19,19,145,171,156,142,193,63,132,224,192,216,112,222,61,41,9,226,41,148,80,123,104,2,9,100,141,69,233,137,201,64,43,166,147,184,64,70,212,61,187,36,92,170,120,136,163,236,231]"
+    ```
+
+
+After importing or creating a wallet, it will be ready for use. The private key's storage path can be found under `SOLANA_PRIVATE_KEY_PATH` in `.agents.env`.
+
+## Using a Wallet in an Agent
+
+### Prerequisites
+
+**Important:** Ensure your wallet is funded before use. Without sufficient SOL, Web3 tools may fail due to a lack of gas fees or available funds.
+
+### Agent Code Example
+
+Once the wallet is set up, it is automatically accessible by Web3 tools. To use it, simply include Web3 tools in your agent’s toolset.
+
+Below is an example of how to enable the agent with the Jupiter tool for token swapping. The agent can call the `swap_token` function using the previously set up wallet to execute swaps when needed.
+
+```python
+agent = CodeAgent(
+    model=model,
+    tools=[jupiter.swap_token],
+)
+```
+
+For details on tool integration, refer to the tools section of the documentation.
+
+================================================
+File: /tutorials/clients.mdx
+================================================
+---
+title: Clients
+---
+## What is a Client?
+
+A Client connects your agent to real-world input and output sources. It delivers [Messages](https://github.com/galadriel-ai/galadriel/blob/main/galadriel/entities.py#L11) to your agent and routes responses to their destination.
+
+A Client can be one (or both) of:
+
+- **Input (AgentInput)**: Provides messages to the agent.
+- **Output (AgentOutput)**: Sends the agent's responses to their destination.
+
+This design allows your agent to integrate seamlessly with a wide range of sources, from scheduled tasks (like cron jobs) to interactive platforms (like Discord bots).
+
+## Adding Clients to Your Agent
+
+### Prerequisites
+
+If you don’t have an already working agent built with Galadriel, please go through the [quick start](/galadriel-network/get-started/quickstart).
+
+### Gradio Client Example
+
+Clients connect to [AgentRuntime](/galadriel-network/concepts/runtime), which manages how the agent processes inputs and returns results.
+
+```python
+import asyncio
+from galadriel import AgentRuntime, CodeAgent
+from galadriel.clients import GradioClient
+from galadriel.core_agent import LiteLLMModel, DuckDuckGoSearchTool
+
+model = LiteLLMModel(model_id="gpt-4o", api_key="<YOUR_OPENAI_API_KEY>")
+
+agent = CodeAgent(model=model, tools=[DuckDuckGoSearchTool()])
+
+gradio_client = GradioClient()
+
+runtime = AgentRuntime(
+    agent=agent,
+    inputs=[gradio_client],
+    outputs=[gradio_client],
+)
+
+asyncio.run(runtime.run())
+```
+
+### Supported Clients (or Build Your Own)
+
+We currently provide built-in support for:
+
+- Discord
+- Telegram
+- Gradio
+- Terminal
+- Cron
+- SimpleMessageClient
+- Twitter
+
+Visit our [Clients](/galadriel-network/integrations/clients) to learn more about using these clients or creating your own.
+
+## Conclusion
+
+Clients allow you to plug your agent into the real world with minimal effort. Need an AI that interacts via Discord, Slack, email, or webhooks? Just write a Client that conforms to `AgentInput` and `AgentOutput`, and you're good to go.
+
+## See Next
+
+- [Out-of-the-box client integrations](/galadriel-network/integrations/clients)
+- [Deep dive into Tools](/galadriel-network/tutorials/tools)
+
+Happy coding! 🚀
+
+
+================================================
+File: /tutorials/chat-to-agents.mdx
+================================================
+---
+title: Chat to Agents via UI
+---
+The Galadriel framework includes a built-in Gradio UI Client and a Terminal Client, enabling seamless local experimentation right out of the box. Unlike third-party clients such as Discord or Telegram, these clients require no additional configuration or authentication tokens. This makes them ideal for testing and debugging your agent before transitioning to a more advanced setup.
+
+## Gradio Client
+
+### Using Gradio with `AgentRuntime`
+
+Gradio can be easily imported and used as a client right out of the box. For example, let's take the [Discord agent setup](https://github.com/galadriel-ai/galadriel/tree/main/examples/discord) and swap out the client for Gradio, as demonstrated in the code snippet below:
+
+```python
+from galadriel.core_agent import LiteLLMModel
+from dotenv import load_dotenv
+from pathlib import Path
+from character_agent import CharacterAgent
+from galadriel.tools.composio_converter import convert_action
+from tools import get_time
+from galadriel import AgentRuntime
+import os
+import asyncio
+from galadriel.clients import GradioClient
+
+load_dotenv(dotenv_path=Path(".") / ".env", override=True)
+model = LiteLLMModel(model_id="gpt-4o", api_key=os.getenv("OPENAI_API_KEY"))
+
+composio_weather_tool = convert_action(
+    os.getenv("COMPOSIO_API_KEY"), "WEATHERMAP_WEATHER"
+)
+
+elon_musk_agent = CharacterAgent(
+    character_json_path="agent.json",
+    tools=[composio_weather_tool, get_time],
+    model=model,
+    max_steps=6,
+)
+
+**gradio_client = GradioClient()**
+
+runtime = AgentRuntime(
+    inputs=[**gradio_client**],
+    outputs=[**gradio_client**],
+    agent=elon_musk_agent,
+)
+
+asyncio.run(runtime.run())
+
+```
+
+Notice how simple it is, no extra configuration or token is required.
+
+### Interacting with Gradio UI
+
+Once the Agent is running, you can open Gradio UI locally in [http://0.0.0.0:7860](http://0.0.0.0:7860/).
+
+Here’s a screenshot showcasing an couple message interaction with Gradio:
+
+<img src="/images/gradio_client.png" alt="Gradio Client" />
+
+## Terminal client
+
+The **Terminal Client** provides an all-in-one debugging and testing environment. It is particularly useful as a minimal solution for agents that require ongoing conversations, as it keeps both the interaction and logs in the same terminal session.
+
+### Using Terminal client with `AgentRuntime`
+
+Similar to the Gradio client, the Terminal Client can be imported and used directly without extra configuration:
+
+```python
+from galadriel.clients import TerminalClient
+
+terminal_client = TerminalClient()
+
+runtime = AgentRuntime(
+    inputs=[terminal_client],
+    outputs=[terminal_client],
+    agent=<your-agent>,
+)
+```
+
+### Interacting with Terminal Client
+
+Once the agent is running, you can interact with it directly in the terminal. Your input will appear after the `you:` prompt, and the agent's response will follow the `Agent:` log.
+
+Below is a screenshot showcasing a simple interaction:
+
+<img src="/images/terminal_client.png" alt="Terminal Client" />
+
+## Conclusion
+
+The **Gradio UI Client** offers an intuitive and seamless way to test and debug your agent locally, requiring no extra configuration or authentication tokens. This makes it ideal for rapid experimentation before integrating with more complex clients like Discord or Telegram.
+
+For a lightweight alternative, the [**Terminal Client**](https://github.com/galadriel-ai/galadriel/blob/main/galadriel/clients/terminal_client.py) allows direct command-line interaction, making it useful for quick tests in non-graphical environments or when running agents on remote servers.
+
+By leveraging both **Gradio** and the **Terminal Client**, you can efficiently prototype, debug, and refine your agent before deploying it in a production setting.
+
+## What next?
+
+To unlock more capabilities to your agent, check out how to use more complex clients:
+
+- [Clients](/galadriel-network/integrations/clients)
+
+
+================================================
+File: /tutorials/memory.mdx
+================================================
+---
+title: Memory
+---
+## What is agent memory?
+
+Agents come with a default memory management system that enhances the experience of ongoing conversations. For example, a Discord agent can remember previous interactions (from messages, tools and errors), ensuring smoother and more natural conversations.
+
+### **Memory components**
+
+- **Past LLM outputs** – Previous responses generated by the language model
+- **Actions taken** – The tools or functions the agent has executed
+- **Observations** – Feedback or results received after performing an action
+- **Errors encountered** – Any failures or issues that occurred
+
+### **How memory is used**
+
+- This information is processed into a structured series of messages.
+- These messages serve as input for the LLM, helping it maintain context.
+- The agent remembers:
+    - Chat history
+    - The tools it has used previously
+    - Any relevant error logs
+- Keeping this memory updated ensures a smooth, conversation-like experience with the agent.
+
+## Adding Memory to your Agent
+
+### Setup
+
+Memory is enabled by default in both [CodeAgent and ToolCallingAgent](https://github.com/galadriel-ai/galadriel/blob/main/galadriel/agent.py#L54-L104) by flagging the `flush_memory` variable to `False`.
+
+### Debug
+
+When the `Runtime` runs in debug mode, it logs the current memory at each new message. To enable debug mode in `Runtime`, set `debug=True`:
+
+```python
+my_agent = AgentRuntime(
+    inputs=[client],
+    outputs=[client],
+    agent=chat_agent,
+    **debug=True**
+)
+```
+
+When running in debug mode, the current memory is logged at each new message, as shown in the snippet below:
+
+```python
+[INFO] Current agent memory: [{'content': [{'text': 'New task:\n'
+                       '\n'
+                       '# Task: You are chatting with user_03344 on '
+                       'discord. You must reply to the incoming message in the '
+                       'voice and style of Elon Musk:\n'
+                       'yo\n'
+                       '\n'
+                       'Be very brief, and concise, add a statement in your '
+                       'voice.\n'
+                       'Please remember the chat history and use it to answer '
+                       'the question.\n',
+               'type': 'text'}],
+  'role': <MessageRole.USER: 'user'>},
+ {'content': [{'text': 'Calling tools:\n'
+                       "[{'id': 'call_VfeuzcvGhelSk2B2M9a2qxKy', 'type': "
+                       "'function', 'function': {'name': 'final_answer', "
+                       '\'arguments\': {\'answer\': "Hey! 🚀 What\'s up? How '
+                       "can I help accelerate humanity's future today? "
+                       '🔋✨"}}}]',
+               'type': 'text'}],
+  'role': <MessageRole.ASSISTANT: 'assistant'>}]
+```
+
+### Disable
+
+Memory can be manually disabled as follows:
+
+```python
+agent = CodeAgent(flush_memory=True)
+```
+
+When `flush_memory=True` is set, memory is not updated or carried over to new tasks, allowing the agent to operate without context from previous interactions. This can be useful for zero-shot tasks and/or when the LLM context size is critical.
+
+## Conclusion
+
+Agent memory plays a crucial role in enabling natural, context-aware interactions. Key takeaways:
+
+- **Enhances responses** – By remembering chat history, tool usage, and error logs, agents can generate more relevant answers
+- **Enabled by default** – `AgentRuntime` retains memory across interactions unless manually disabled
+- **Debugging support** – When debug mode is enabled (`debug=True`), the agent logs its memory at each step for transparency
+- **Manual control** – Memory can be disabled (`flush_memory=True`) for zero-shot tasks or when context size is a concern
+
+By understanding and configuring memory effectively, you can tailor agent behavior to best suit your needs.
+
+
+================================================
+File: /tutorials/payments.mdx
+================================================
+---
+title: Payments
+---
+Agents can optionally be monetized using a pricing model. If a pricing object is provided, the runtime ensures that the client submitting a request has transferred the required funds on the Solana blockchain before processing the request.
+
+The `Runtime` also enables configuring payments to the Agent, to get paid for the tasks performed, by checking if the message from the client includes a transaction signature on the Solana blockchain, transferring enough funds to the Agent.
+
+To enable pricing, all that is needed is giving the Runtime a `Pricing` object that contains the payment size needed in SOL, and the Agent wallet address:
+
+```python
+pricing = Pricing(
+    wallet_address=agent_wallet_address,
+    cost=0.1, # 0.1 SOL
+)
+
+runtime = AgentRunTime(
+	inputs=[my_client],
+	outputs=[my_client],
+	agent=agent,
+	pricing=pricing,
+)
+```
+
+When pricing is forwarded, the runtime:
+
+- checks if the incoming messages from the `inputs` contain a Solana transaction signature. The signatures can be either just a signature string or a link to Solscan.
+- Verifies that the transaction transferred the required amount of SOL.
+- Only forwards the `Message` to the agent if the payment is valid.
+
+
+================================================
+File: /get-started/overview.mdx
+================================================
+## What is Galadriel?
+
+**Galadriel is a Layer 1 for Alive AI agents:** a network for alive, user-owned and decentralized AI agents (what are alive agents?). 
+
+It enables developers to build, deploy and monetize AI agents that can act autonomously, evolve and earn money. For example, you can build a wide variety of agents, including:
+
+- **Fully** **autonomous**, goal completion agents
+- **Web3** agents leveraging crypto rails
+- **DeFAI** agents, including **AI hedge funds**
+- **Task agents** earning money
+- Social agents for **X**, **Discord** & **Telegram**
+- **Multi-agent** swarms
+- Fully decentralized and **verifiable agents**
+- **Self-evolving** agents
+
+**High-level overview of Galadriel L1:**
+
+![image.png](/images/overview-layers.png)
+
+<Warning>
+  Note that all of the functionality is not live yet as we are in alpha.
+    If you’re interested in getting early access to entire L1, sign up here.
+</Warning>
+
+Let’s break it down:
+
+- **Application layer:** Highly optimized and vertically integrated agent framework that enables building autonomous and Web3 agents using Python. It is built on top of [smolagents](https://github.com/huggingface/smolagents) from Hugging Face.
+    
+    Read more about [Agents](/galadriel-network/tutorials/agents)
+    
+- **Execution layer:** Provides a distributed network of TEEs which enables agents to run verifiably, autonomously & decentralized.
+- **Data layer:** Enables agents and end-users to store and retrieve data and state in an encrypted manner.
+- **Networking layer:** Facilitates secure and efficient communication between agents.
+- **Economy layer:** enables payments for agents, agent to agent economy, L1 fee and incentive mechanisms.
+
+## What problems does Galadriel solve?
+
+### 1. Poor DevExp
+
+Building a powerful (Web3) AI agent beyond another X larp agent, takes lot of time, customization and know-how.
+
+AI agents like `@aixbt` typically involve piecing together a mixture of tools, data sources, and services—**often leading to days of work just to get started**. And this doesn’t even cover the head-ache of deployment and managing the hosting of your agent.
+
+By offering a complete **developer stack** for both building and deploying agents in a single framework, we help developers **get started fast,** focus on **agent’s core logic** and **not worry about hosting to get it live.**
+
+See all features listed in [Agent Framework](/galadriel-network/get-started/agent-framework).
+
+### 2. Agent monetization
+
+Building agents that earn money requires cobbling together multiple third-party services for payments, wallets, to launching agent-specific tokens— all adding up complexity and friction. 
+
+Galadriel makes agent monetization simple with out-of-the-box solutions to:
+
+- **create and manage agent wallet**
+- **enable agent to accept payments for tasks**
+- **Web3 tooling for on-chain actions**
+- **3rd party client integrations like Telegram or X.com**
+
+Imagine building an advanced agent like `@aixbt` to autonomously trade for you, but also selling users access to it’s private TG channel for latest alpha.
+
+See more example use cases here.
+
+### 3. Agents’ centralization and human-control
+
+Although AI agents in Web3 have attracted billions in market cap, most of them are still controlled by humans and hosted on centralized servers —creating risks and trust issues for investors, users, and the broader community.
+
+Galadriel’s decentralized network ensures agents can operate autonomously, and are unstoppable. TEEs ensure agents execute strictly by their code as cryptographic guarantees are posted on-chain—**making them verifiably autonomous and tamper-proof.**
+
+## See next
+
+<CardGroup cols={3}>
+    <Card title="Agent framework"
+          href="/galadriel-network/get-started/agent-framework" icon="sitemap">
+        See what our agent framework unlocks for devs.
+    </Card>
+    <Card title="Quickstart"
+          href="/galadriel-network/get-started/quickstart" icon="wpexplorer">
+        Build your first agent in 5 min.
+    </Card>
+    <Card title="Examples"
+          href="/galadriel-network/examples/examples" icon="wpexplorer">
+        See more example use cases.
+    </Card>
+</CardGroup>
+
+
+================================================
+File: /get-started/agent-framework.mdx
+================================================
+## Problems with existing frameworks
+
+While our team built [Daige](https://www.daige.ai/), we tried every major Web3 agent framework and ran into well-known issues most of them have:
+
+1. **Rigid & Complex**: Too many layers of abstraction, making them hard to debug and extend.
+2. **Workflow-Focused**: They emphasize workflows over autonomous, goal-solving agents.
+3. **Overgrown & Hard to Customize**: Production often requires rewriting the whole framework from scratch.
+4. **Weak MVP Focus**: They can spin up basic agents quickly but struggle with truly powerful ones.
+
+We knew creating a world-class agent framework from scratch would take serious effort and R&D. That’s why our solution is built on [**smolagents**](https://github.com/huggingface/smolagents) from Hugging Face—a lightweight, powerful library that enables autonomous agents.
+
+## Galadriel framework
+
+Just as Solana leans on Rust, our framework is like the “SVM of agent frameworks”—highly optimized and tightly integrated for our L1.
+
+Together with smolagents as base, Galadriel’s framework unlocks the building of autonomous agents with benefits from:
+
+1. **Simplicity**: ~1,000 lines of agent logic, minimal abstractions.
+2. **Autonomous Agents**: Build agents that plan and control their own workflows.
+3. **Broad Tool Support**: Integrations with [LangChain](https://huggingface.co/docs/smolagents/reference/tools#smolagents.Tool.from_langchain), [Anthropic's MCP](https://huggingface.co/docs/smolagents/reference/tools#smolagents.ToolCollection.from_mcp), and more.
+4. **Web3 Functionalities**: Out-of-the-box on- and off-chain tools, wallet integration, and payments.
+5. **Most used Clients**: Integrate your agent on X, TG, Discord, and other main clients.
+6. **Model-Agnostic**: Works with any LLM, local or hosted.
+7. **Modality-Agnostic**: Supports text, vision, video, and audio inputs.
+
+**Framework architecture:**
+
+![image.png](/images/agent-framework.png)
+
+<CardGroup cols={2}>
+    <Card title="Quickstart"
+          href="/galadriel-network/get-started/quickstart" icon="wpexplorer">
+        Build your first agent in 5 min.
+    </Card>
+    <Card title="Agents"
+          href="/galadriel-network/tutorials/agents" icon="sitemap">
+        Read more about AI agents.
+    </Card>
+</CardGroup>
+
+
+================================================
+File: /get-started/quickstart.mdx
+================================================
+---
+title: "Quickstart"
+---
+
+This quickstart covers:
+
+1. Setting up the dev environment
+2. Creating and running a simple agent that uses the web search tool
+3. Creating and running a Web3 agent that uses the Dexscreener tool
+
+## Setup
+
+### 1. Requirements
+
+Python >=3.10
+
+### 2. Dev Environment
+
+First, set up your local environment and then install the `galadriel` Python package.
+
+```bash
+python -m venv venv
+source venv/bin/activate
+pip install galadriel
+```
+
+## Create a Simple Web Search Agent
+
+### 1. Agent Code
+
+Create a file named `agent.py` with the following Python code.
+
+Add your OpenAI API Key.
+
+```python
+import asyncio
+from galadriel import AgentRuntime, CodeAgent
+from galadriel.clients import SimpleMessageClient
+from galadriel.core_agent import LiteLLMModel, DuckDuckGoSearchTool
+
+# Set up the model (replace with your API key)
+model = LiteLLMModel(model_id="gpt-4o", api_key="<YOUR_OPENAI_API_KEY>")
+
+# Create the AI agent with web search capabilities
+agent = CodeAgent(
+    model=model,
+    tools=[DuckDuckGoSearchTool()],
+)
+
+# Define a simple terminal client so you can chat with the agent
+client = SimpleMessageClient("What is the capital of Estonia?")
+
+# Set up and run the agent runtime
+runtime = AgentRuntime(
+    agent=agent,
+    inputs=[client],
+    outputs=[client],
+)
+
+asyncio.run(runtime.run())
+```
+
+### Running the Agent
+Execute the script:
+```bash
+python agent.py
+```
+When the agents starts to execute the task, it prints the output similar to this one:
+```
+╭────────────────────────────────── New run ───────────────────────────────────╮
+│                                                                              │
+│ What is the capital of Estonia?                                              │
+│                                                                              │
+╰─ LiteLLMModel - gpt-4o ──────────────────────────────────────────────────────╯
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Step 1 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ ─ Executing parsed code: ─────────────────────────────────────────────────────
+  capital_estonia = web_search(query="capital of Estonia")
+  print(capital_estonia)
+ ──────────────────────────────────────────────────────────────────────────────
+```
+Which will be followed by more steps until the results reaches the output
+```bash
+======== simple_message_client.post_output ========
+request: content='What is the capital of Estonia?'
+response: content='Tallinn'
+```
+
+###  How it Works
+
+This simple agent receives a question from the client and executes a series of reasoning steps to provide an answer. It autonomously determines when to search the web.
+
+It leverages:
+
+- `gpt-4o` model from OpenAI for agent reasoning.
+- `SimpleMessageClient` to send and receive messages.
+- `AgentRuntime` to connect the agent to the client and execute tasks.
+- `DuckDuckGoSearchTool` for web-based information retrieval.
+
+## Create a Web3 Agent
+
+### Agent Code
+
+Let’s extend the web search agent with Web3 capabilities to fetch real-time market data.
+
+Modify your script to include:
+
+```python
+from galadriel.tools.web3 import dexscreener
+```
+
+We are going to use [Dexscreener](https://dexscreener.com/)  to fetch market data. Dexscrener is a widely used Web3 tool to monitor crypto market data like prices, new tokens, etc.
+Modify the `CodeAgent` initialization:
+
+```python
+agent = CodeAgent(
+    model=model,
+    tools=[
+        DuckDuckGoSearchTool(),
+        dexscreener.fetch_market_data
+    ],
+    additional_authorized_imports=["json"]
+)
+```
+
+<Info>
+    Note `additional_authorized_imports=["json"]` parameter in the `CodeAgent` initialization.
+    It is required because `dexscreener.fetch_market_data` imports `json` module and the Python interpreter doesn’t allow imports by default outside of a safe list.
+</Info>
+
+Update the client’s input by asking a Web3-specific question:
+
+```python
+client = SimpleMessageClient("What are the top tokens on the market today?")
+```
+
+### Running the Agent
+
+Execute the script:
+
+```bash
+python agent.py
+```
+
+You should receive an output similar to:
+
+```bash
+Answer: The top tokens by 24-hour volume are: 'Trump's Tax Company', 'dogwifouthat', 'THE DARK KNIGHT', and 'BRITISH DOG'
+```
+
+## 🎉 Gratz on Building Your First Agent!
+
+You’ve successfully built both a generic web search agent and a Web3-focused agent using Galadriel.
+
+But this is just scratching the surface - **what’s next?** To unlock more capabilities for your agent, check out these resources:
+
+- Tutorials section with [Agents](/galadriel-network/tutorials/agents), [Client](galadriel-network/tutorials/clients), [Wallet](/galadriel-network/tutorials/wallet)
+- [Deep dive into fundamental concepts like AgentRuntime](/galadriel-network/concepts/runtime)
+- [Real-world examples of building more complex agents](/galadriel-network/examples/examples)
+
+Happy coding! 🚀
+
+

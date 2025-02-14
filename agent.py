@@ -14,10 +14,10 @@ load_dotenv(dotenv_path=Path(".") / ".env", override=True)
 model = LiteLLMModel(model_id="gpt-4o", api_key=os.getenv("OPENAI_API_KEY"))
 
 # Read code and documentation digests
-with open("digest_code.txt", "r") as f:
+with open("output_code.txt", "r") as f:
     code_knowledge = f.read()
 
-with open("digest_docs.txt", "r") as f:
+with open("output_docs.txt", "r") as f:
     documentation_knowledge = f.read()
 
 prompt = format_prompt.execute(PROMPT, {
