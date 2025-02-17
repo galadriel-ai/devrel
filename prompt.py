@@ -59,11 +59,11 @@ For example, developers can build agents such as:
 - End users: Users who interact with agents to access services or perform tasks.
 - Nodes: Individuals or organizations that provide the secure hardware infrastructure (TEEs) for running agents.
 
-I'll provide you with knowledge from code and knowledge from documentation. After that, I'll provide you with a task to do.
-Code knowledge:
+I'll provide you with knowledge from code and documentation files (those are two separate github repositories). After that, I'll provide you with a task to do.
+Code repository:
 {{code_knowledge}}
 
-Documentation knowledge:
+Documentation repository:
 {{documentation_knowledge}}
 
 Tasks:
