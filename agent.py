@@ -38,17 +38,15 @@ runtime = AgentRuntime(
     outputs=[gradio_client],
 )
 
-
-def _update_prompt_periodically(agent):
+def _update_prompt(agent):
     """
-    This function tries to update the prompt periodically (every 1h) by ingesting the latest code and documentation.
-    It then formats a new prompt and updates the agent with the new prompt.
+    This function updates the prompt for the agent.
     """
     try:
         logger.info("Updating prompt...")
         # Get code and documentation
         summary_code, tree_code, content_code = ingest(source="https://github.com/galadriel-ai/galadriel",
-                                        exclude_patterns=["*.env", ".github/", "*.gitignore", "*.sh", "*.toml", "*.yml",
+                                        exclude_patterns=[".github/", "*.gitignore", "*.sh", "*.toml", "*.yml",
                                                         "/tests", "/scripts", "/galadriel/docker"])
         summary_docs, tree_docs, content_docs = ingest(source="https://github.com/galadriel-ai/docs",
                                         include_patterns="galadriel-network/*")
@@ -70,7 +68,12 @@ def _update_prompt_periodically(agent):
     except Exception as e:
         logger.error(f"Error updating prompt: {str(e)}", exc_info=True) 
 
-    # Schedule the next update after an hour
+def _update_prompt_periodically(agent):
+    """
+    This function tries to update the prompt periodically (every 1h) by ingesting the latest code and documentation.
+    It then formats a new prompt and updates the agent with the new prompt.
+    """
+    _update_prompt(agent)
     threading.Timer(3600, _update_prompt_periodically, args=[agent]).start()
 
 # Run the agent and start periodic prompt update
