@@ -69,7 +69,7 @@ Documentation repository:
 Tasks:
 {{request}}
 
-Please answer the task based on the provided knowledge (code and documentation).
+Please answer the task based on the provided knowledge (code and documentation) and don't use any tool, skip to the final answer.
 """
 
 
