@@ -20,7 +20,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 load_dotenv(dotenv_path=Path(".") / ".env", override=True)
-model = LiteLLMModel(model_id="gemini/gemini-2.0-flash", api_key=os.getenv("GEMINI_API_KEY"))
+model = LiteLLMModel(model_id=os.getenv("LLM_MODEL"), api_key=os.getenv("LLM_API_KEY"))
 
 prompt = format_prompt.execute(PROMPT, {"code_knowledge": "", "documentation_knowledge": ""})
 agent = CodeAgent(
