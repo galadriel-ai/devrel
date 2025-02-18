@@ -4,7 +4,7 @@ from pathlib import Path
 import threading
 from dotenv import load_dotenv
 from gitingest import ingest
-from galadriel import AgentRuntime, ToolCallingAgent
+from galadriel import AgentRuntime, CodeAgent
 from galadriel.clients import GradioClient
 from galadriel.core_agent import LiteLLMModel
 from galadriel.domain.prompts import format_prompt
@@ -20,18 +20,19 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 load_dotenv(dotenv_path=Path(".") / ".env", override=True)
-model = LiteLLMModel(model_id="gpt-4o", api_key=os.getenv("OPENAI_API_KEY"))
+model = LiteLLMModel(model_id=os.getenv("LLM_MODEL"), api_key=os.getenv("LLM_API_KEY"))
 
 prompt = format_prompt.execute(PROMPT, {"code_knowledge": "", "documentation_knowledge": ""})
-agent = ToolCallingAgent(
+agent = CodeAgent(
     model=model,
     tools=[],
     prompt_template=prompt,
-    flush_memory=True
+    flush_memory=True,
+    max_steps=2
 )
 
 # Set up Gradio client and runtime
-gradio_client = GradioClient()
+gradio_client = GradioClient(server_port=80)
 runtime = AgentRuntime(
     agent=agent,
     inputs=[gradio_client],
